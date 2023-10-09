@@ -82,13 +82,22 @@ public class ExtensionLoader<T> {
 
     private final Holder<Map<String, Class<?>>> cachedClasses = new Holder<Map<String, Class<?>>>();
 
+    /**
+     * 缓存 扩展点name 和 扩展点实现类上@Activate注解 的映射关系
+     */
     private final Map<String, Activate> cachedActivates = new ConcurrentHashMap<String, Activate>();
     private final ConcurrentMap<String, Holder<Object>> cachedInstances = new ConcurrentHashMap<String, Holder<Object>>();
     private final Holder<Object> cachedAdaptiveInstance = new Holder<Object>();
     private volatile Class<?> cachedAdaptiveClass = null;
+    /**
+     * 默认扩展点名称，对应接口注解@SPI("xxx")指定名称
+     */
     private String cachedDefaultName;
     private volatile Throwable createAdaptiveInstanceError;
 
+    /**
+     * 缓存了所有Wrapper类集合
+     */
     private Set<Class<?>> cachedWrapperClasses;
 
     private Map<String, IllegalStateException> exceptions = new ConcurrentHashMap<String, IllegalStateException>();
@@ -98,10 +107,24 @@ public class ExtensionLoader<T> {
         objectFactory = (type == ExtensionFactory.class ? null : ExtensionLoader.getExtensionLoader(ExtensionFactory.class).getAdaptiveExtension());
     }
 
+    /**
+     * 静态方法，判断指定类type上是否存在扩展点注解@SPI
+     *
+     * @param type
+     * @return
+     * @param <T>
+     */
     private static <T> boolean withExtensionAnnotation(Class<T> type) {
         return type.isAnnotationPresent(SPI.class);
     }
 
+    /**
+     * 获取接口type对应的扩展点加载器ExtensionLoader
+     *
+     * @param type
+     * @return
+     * @param <T>
+     */
     @SuppressWarnings("unchecked")
     public static <T> ExtensionLoader<T> getExtensionLoader(Class<T> type) {
         if (type == null)
@@ -116,6 +139,8 @@ public class ExtensionLoader<T> {
 
         ExtensionLoader<T> loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
         if (loader == null) {
+            // 不同接口类有各自专属的扩展点加载器
+            // 处理并发访问问题
             EXTENSION_LOADERS.putIfAbsent(type, new ExtensionLoader<T>(type));
             loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
         }
@@ -286,6 +311,7 @@ public class ExtensionLoader<T> {
     }
 
     /**
+     * 返回对应接口type下name名称的扩展点对象
      * Find the extension with the given name. If the specified name is not found, then {@link IllegalStateException}
      * will be thrown.
      */
@@ -315,6 +341,7 @@ public class ExtensionLoader<T> {
     }
 
     /**
+     * 返回默认扩展点对象
      * Return default extension, return <code>null</code> if it's not configured.
      */
     public T getDefaultExtension() {
@@ -601,6 +628,9 @@ public class ExtensionLoader<T> {
             if (urls != null) {
                 while (urls.hasMoreElements()) {
                     java.net.URL resourceURL = urls.nextElement();
+                    // 加载资源
+                    // 解析资源文件中扩展点信息
+                    // 每个资源文件对应一个接口的所有扩展点信息
                     loadResource(extensionClasses, classLoader, resourceURL);
                 }
             }
@@ -610,12 +640,20 @@ public class ExtensionLoader<T> {
         }
     }
 
+    /**
+     * 读取资源文件内容，依次解析各行信息
+     *
+     * @param extensionClasses
+     * @param classLoader
+     * @param resourceURL
+     */
     private void loadResource(Map<String, Class<?>> extensionClasses, ClassLoader classLoader, java.net.URL resourceURL) {
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(resourceURL.openStream(), "utf-8"));
             try {
                 String line;
                 while ((line = reader.readLine()) != null) {
+                    // 每行#后面是注解内容，截断，不做解析
                     final int ci = line.indexOf('#');
                     if (ci >= 0) line = line.substring(0, ci);
                     line = line.trim();
@@ -628,6 +666,8 @@ public class ExtensionLoader<T> {
                                 line = line.substring(i + 1).trim();
                             }
                             if (line.length() > 0) {
+                                // 加载扩展点实现类信息
+                                // 解析出每行的 扩展点名称name = 扩展点类Class.forName(line, true, classLoader)
                                 loadClass(extensionClasses, resourceURL, Class.forName(line, true, classLoader), name);
                             }
                         } catch (Throwable t) {
@@ -645,6 +685,20 @@ public class ExtensionLoader<T> {
         }
     }
 
+    /**
+     * 加载扩展点实现类信息
+     * 1. 实现类存在 @Adaptive 注解，缓存cachedAdaptiveClass为对应实现类
+     * 2. 实现类存在 接口类型参数的构造函数，为Wrapper类，缓存Wrapper集合cachedWrapperClasses
+     * 3. 其他有默认构造函数的都是扩展点
+     *       实现类存在注解 @Activate, 缓存cachedActivates记录 扩展点名称name 和 注解@Activate 映射关系
+     *
+     *
+     * @param extensionClasses
+     * @param resourceURL
+     * @param clazz 扩展点类
+     * @param name 扩展点名称
+     * @throws NoSuchMethodException
+     */
     private void loadClass(Map<String, Class<?>> extensionClasses, java.net.URL resourceURL, Class<?> clazz, String name) throws NoSuchMethodException {
         if (!type.isAssignableFrom(clazz)) {
             throw new IllegalStateException("Error when load extension class(interface: " +
@@ -652,6 +706,7 @@ public class ExtensionLoader<T> {
                     + clazz.getName() + "is not subtype of interface.");
         }
         if (clazz.isAnnotationPresent(Adaptive.class)) {
+            // 扩展点实现类上存在注解 @Adaptive
             if (cachedAdaptiveClass == null) {
                 cachedAdaptiveClass = clazz;
             } else if (!cachedAdaptiveClass.equals(clazz)) {
@@ -660,14 +715,20 @@ public class ExtensionLoader<T> {
                         + ", " + clazz.getClass().getName());
             }
         } else if (isWrapperClass(clazz)) {
+            // 扩展点实现类上存在 接口类型type 作为参数的构造函数，说明是扩展点包装类Wrapper
             Set<Class<?>> wrappers = cachedWrapperClasses;
             if (wrappers == null) {
                 cachedWrapperClasses = new ConcurrentHashSet<Class<?>>();
                 wrappers = cachedWrapperClasses;
             }
+            // 缓存Wrapper类集合
             wrappers.add(clazz);
         } else {
             clazz.getConstructor();
+            // 确定扩展点名称name
+            // 1. 文件中指定了就用文件中的 name=xxx.xxx.xxx.Interface
+            // 2. 用扩展点实现类注解 @Extension 指定的名称
+            // 3. 用扩展点实现类类名
             if (name == null || name.length() == 0) {
                 name = findAnnotationName(clazz);
                 if (name.length() == 0) {
@@ -676,6 +737,7 @@ public class ExtensionLoader<T> {
             }
             String[] names = NAME_SEPARATOR.split(name);
             if (names != null && names.length > 0) {
+                // 如果扩展点实现类存在注解 @Activate, cachedActivates缓存 扩展点名称和扩展点@Activate注解 的映射关系
                 Activate activate = clazz.getAnnotation(Activate.class);
                 if (activate != null) {
                     cachedActivates.put(names[0], activate);
@@ -704,6 +766,15 @@ public class ExtensionLoader<T> {
         }
     }
 
+    /**
+     * 如果文件中未指定扩展点名称name，那么这边两种策略决定扩展点名称
+     * 1. 如果扩展点实现类存在注解 @Extension，用注解指定的名称
+     * 2. 用扩展点实现类类名，如果接口名是类名后缀，那用截去后缀部分作为扩展点名称
+     *    比如接口名Car，扩展点实现类名称RedCar,接口名是实现类后缀，那么选取Red作为当前扩展点名称
+     *
+     * @param clazz
+     * @return
+     */
     @SuppressWarnings("deprecation")
     private String findAnnotationName(Class<?> clazz) {
         com.alibaba.dubbo.common.Extension extension = clazz.getAnnotation(com.alibaba.dubbo.common.Extension.class);
