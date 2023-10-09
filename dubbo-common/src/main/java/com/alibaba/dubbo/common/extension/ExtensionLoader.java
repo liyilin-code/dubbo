@@ -108,6 +108,9 @@ public class ExtensionLoader<T> {
      * 缓存 扩展点name 和 扩展点对象 的映射关系
      */
     private final ConcurrentMap<String, Holder<Object>> cachedInstances = new ConcurrentHashMap<String, Holder<Object>>();
+    /**
+     * 缓存 当前扩展点Adaptive对象
+     */
     private final Holder<Object> cachedAdaptiveInstance = new Holder<Object>();
     /**
      * 指定的 @Adaptive 类
@@ -511,6 +514,7 @@ public class ExtensionLoader<T> {
                     instance = cachedAdaptiveInstance.get();
                     if (instance == null) {
                         try {
+                            // 创建Adaptive扩展点
                             instance = createAdaptiveExtension();
                             cachedAdaptiveInstance.set(instance);
                         } catch (Throwable t) {
