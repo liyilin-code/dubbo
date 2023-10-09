@@ -70,24 +70,48 @@ public class ExtensionLoader<T> {
 
     private static final ConcurrentMap<Class<?>, ExtensionLoader<?>> EXTENSION_LOADERS = new ConcurrentHashMap<Class<?>, ExtensionLoader<?>>();
 
+    /**
+     * 扩展点实现类 和 扩展点对象 映射关系
+     */
     private static final ConcurrentMap<Class<?>, Object> EXTENSION_INSTANCES = new ConcurrentHashMap<Class<?>, Object>();
 
     // ==============================
 
+    /**
+     * 扩展点接口
+     */
     private final Class<?> type;
 
+    /**
+     * 扩展点对象创建工厂
+     * 提供返回扩展点对象的能力
+     * 1. 根据扩展点接口类，尝试返回对应接口的Adaptive对象
+     * 2. 根据扩展点名称，尝试从Spring容器中匹配对应名称的Bean对象
+     */
     private final ExtensionFactory objectFactory;
 
+    /**
+     * 扩展点实现类 <-> 扩展点名称
+     */
     private final ConcurrentMap<Class<?>, String> cachedNames = new ConcurrentHashMap<Class<?>, String>();
 
+    /**
+     * 扩展点名称name <-> 扩展点实现类 映射关系
+     */
     private final Holder<Map<String, Class<?>>> cachedClasses = new Holder<Map<String, Class<?>>>();
 
     /**
      * 缓存 扩展点name 和 扩展点实现类上@Activate注解 的映射关系
      */
     private final Map<String, Activate> cachedActivates = new ConcurrentHashMap<String, Activate>();
+    /**
+     * 缓存 扩展点name 和 扩展点对象 的映射关系
+     */
     private final ConcurrentMap<String, Holder<Object>> cachedInstances = new ConcurrentHashMap<String, Holder<Object>>();
     private final Holder<Object> cachedAdaptiveInstance = new Holder<Object>();
+    /**
+     * 指定的 @Adaptive 类
+     */
     private volatile Class<?> cachedAdaptiveClass = null;
     /**
      * 默认扩展点名称，对应接口注解@SPI("xxx")指定名称
@@ -312,6 +336,9 @@ public class ExtensionLoader<T> {
 
     /**
      * 返回对应接口type下name名称的扩展点对象
+     * 对扩展点对象进行了如下两个操作：
+     * 1. 依赖注入，通过ExtensionFactory的Adaptive对象完成注入对象的创建
+     * 2. Wrapper包装类
      * Find the extension with the given name. If the specified name is not found, then {@link IllegalStateException}
      * will be thrown.
      */
@@ -320,8 +347,10 @@ public class ExtensionLoader<T> {
         if (name == null || name.length() == 0)
             throw new IllegalArgumentException("Extension name == null");
         if ("true".equals(name)) {
+            // 如果扩展点名称指定为true，返回默认扩展点对象
             return getDefaultExtension();
         }
+        // 通过Holder对象加锁，解决并发创建问题
         Holder<Object> holder = cachedInstances.get(name);
         if (holder == null) {
             cachedInstances.putIfAbsent(name, new Holder<Object>());
@@ -332,6 +361,7 @@ public class ExtensionLoader<T> {
             synchronized (holder) {
                 instance = holder.get();
                 if (instance == null) {
+                    // 创建name对应的扩展点对象
                     instance = createExtension(name);
                     holder.set(instance);
                 }
@@ -342,6 +372,9 @@ public class ExtensionLoader<T> {
 
     /**
      * 返回默认扩展点对象
+     * 1. 加载并缓存 扩展点名称name <-> 扩展点实现类 映射关系
+     * 2. 创建默认扩展点名称对应的扩展点对象
+     *
      * Return default extension, return <code>null</code> if it's not configured.
      */
     public T getDefaultExtension() {
@@ -364,12 +397,21 @@ public class ExtensionLoader<T> {
         }
     }
 
+    /**
+     * 返回当前扩展点接口支持的所有扩展点名称name的集合
+     * 1. 加载所有 扩展点名称name 和 扩展点实现类型 映射关系
+     * 2. 返回所有扩展点名称name 集合
+     * @return
+     */
     public Set<String> getSupportedExtensions() {
         Map<String, Class<?>> clazzes = getExtensionClasses();
         return Collections.unmodifiableSet(new TreeSet<String>(clazzes.keySet()));
     }
 
     /**
+     * 返回默认扩展点名称
+     * 1. 加载所有 扩展点名称name 和 扩展点实现类型 映射关系
+     * 2. 返回默认扩展点名称
      * Return default extension name, return <code>null</code> if not configured.
      */
     public String getDefaultExtensionName() {
@@ -378,6 +420,7 @@ public class ExtensionLoader<T> {
     }
 
     /**
+     * 接口提供新增一个扩展点的能力
      * Register new extension via API
      *
      * @param name  extension name
@@ -509,22 +552,37 @@ public class ExtensionLoader<T> {
         return new IllegalStateException(buf.toString());
     }
 
+    /**
+     * 创建并返回name对应的扩展点对象
+     *
+     * @param name
+     * @return
+     */
     @SuppressWarnings("unchecked")
     private T createExtension(String name) {
+        // 加载并返回name对应的 扩展点实现类
         Class<?> clazz = getExtensionClasses().get(name);
         if (clazz == null) {
             throw findException(name);
         }
         try {
+            // 1. 创建并缓存扩展点实例
             T instance = (T) EXTENSION_INSTANCES.get(clazz);
             if (instance == null) {
                 EXTENSION_INSTANCES.putIfAbsent(clazz, clazz.newInstance());
                 instance = (T) EXTENSION_INSTANCES.get(clazz);
             }
+
+            // 2. 依赖注入
+            //    Dubbo注入：尝试注入接口类型对应的扩展点Adaptive对象
+            //    Spring注入：尝试注入Spring容器中名称匹配的Bean对象
             injectExtension(instance);
+
+            // 3. 用Wrapper包装类包装
             Set<Class<?>> wrapperClasses = cachedWrapperClasses;
             if (wrapperClasses != null && !wrapperClasses.isEmpty()) {
                 for (Class<?> wrapperClass : wrapperClasses) {
+                    // 以当前对象instance作为包装类构造函数参数创建包装类
                     instance = injectExtension((T) wrapperClass.getConstructor(type).newInstance(instance));
                 }
             }
@@ -535,10 +593,18 @@ public class ExtensionLoader<T> {
         }
     }
 
+    /**
+     * 对instance对象进行依赖注入
+     * 通过set方法进行属性注入
+     *
+     * @param instance
+     * @return
+     */
     private T injectExtension(T instance) {
         try {
             if (objectFactory != null) {
                 for (Method method : instance.getClass().getMethods()) {
+                    // 通过只有唯一参数的set方法进行依赖注入
                     if (method.getName().startsWith("set")
                             && method.getParameterTypes().length == 1
                             && Modifier.isPublic(method.getModifiers())) {
@@ -546,11 +612,16 @@ public class ExtensionLoader<T> {
                          * Check {@link DisableInject} to see if we need auto injection for this property
                          */
                         if (method.getAnnotation(DisableInject.class) != null) {
+                            // 方法上存在 @DisableInject注解，禁止注入
                             continue;
                         }
                         Class<?> pt = method.getParameterTypes()[0];
                         try {
                             String property = method.getName().length() > 3 ? method.getName().substring(3, 4).toLowerCase() + method.getName().substring(4) : "";
+                            // 通过扩展点对象工厂，创建注入的扩展点对象
+                            // 扩展点对象工厂是一个Adaptive对象
+                            // 1. 尝试创建pt接口类型对应的对应扩展点Adaptive对象
+                            // 2. 尝试根据属性名称从Spring容器中找对应的Bean对象
                             Object object = objectFactory.getExtension(pt, property);
                             if (object != null) {
                                 method.invoke(instance, object);
@@ -568,6 +639,11 @@ public class ExtensionLoader<T> {
         return instance;
     }
 
+    /**
+     * 返回扩展点名称name对应的扩展点实现类
+     * @param name
+     * @return
+     */
     private Class<?> getExtensionClass(String name) {
         if (type == null)
             throw new IllegalArgumentException("Extension type == null");
@@ -579,6 +655,10 @@ public class ExtensionLoader<T> {
         return clazz;
     }
 
+    /**
+     * 加锁加载 扩展点名称name <-> 扩展点实现类 映射关系并缓存到cachedClasses中
+     * @return
+     */
     private Map<String, Class<?>> getExtensionClasses() {
         Map<String, Class<?>> classes = cachedClasses.get();
         if (classes == null) {
@@ -593,6 +673,11 @@ public class ExtensionLoader<T> {
         return classes;
     }
 
+    /**
+     * 加载扩展点信息，返回 扩展点名称name <-> 扩展点实现类 映射关系
+     *
+     * @return
+     */
     // synchronized in getExtensionClasses
     private Map<String, Class<?>> loadExtensionClasses() {
         final SPI defaultAnnotation = type.getAnnotation(SPI.class);
@@ -615,6 +700,12 @@ public class ExtensionLoader<T> {
         return extensionClasses;
     }
 
+    /**
+     * 加载指定目录下接口扩展点信息
+     *
+     * @param extensionClasses
+     * @param dir
+     */
     private void loadDirectory(Map<String, Class<?>> extensionClasses, String dir) {
         String fileName = dir + type.getName();
         try {
@@ -691,7 +782,8 @@ public class ExtensionLoader<T> {
      * 2. 实现类存在 接口类型参数的构造函数，为Wrapper类，缓存Wrapper集合cachedWrapperClasses
      * 3. 其他有默认构造函数的都是扩展点
      *       实现类存在注解 @Activate, 缓存cachedActivates记录 扩展点名称name 和 注解@Activate 映射关系
-     *
+     *       缓存cachedNames中记录 扩展点实现类 和 扩展点名称 映射关系
+     *       参数extensionClasses中添加 扩展点名称name 和 扩展点实现类 的映射关系
      *
      * @param extensionClasses
      * @param resourceURL
@@ -757,6 +849,12 @@ public class ExtensionLoader<T> {
         }
     }
 
+    /**
+     * 判断是否是包装类Wrapper
+     *    依据：指定类存在当前接口作为参数的构造函数就是Wrapper类
+     * @param clazz
+     * @return
+     */
     private boolean isWrapperClass(Class<?> clazz) {
         try {
             clazz.getConstructor(type);
