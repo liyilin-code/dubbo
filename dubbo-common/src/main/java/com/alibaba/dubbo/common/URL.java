@@ -170,6 +170,7 @@ public final class URL implements Serializable {
     }
 
     /**
+     * 解析url串为URL对象
      * Parse url string
      *
      * @param url URL string
@@ -187,7 +188,9 @@ public final class URL implements Serializable {
         int port = 0;
         String path = null;
         Map<String, String> parameters = null;
-        int i = url.indexOf("?"); // seperator between body and parameters 
+        int i = url.indexOf("?"); // seperator between body and parameters
+        // 1. 解析url中的参数parameters
+        // xxxxxxxxxxx?param1=value1&param2=value2
         if (i >= 0) {
             String[] parts = url.substring(i + 1).split("\\&");
             parameters = new HashMap<String, String>();
@@ -206,17 +209,21 @@ public final class URL implements Serializable {
         }
 
         // ignore the url content following '#'
+        // 忽略url中'#'后面的内容
         int poundIndex = url.indexOf('#');
         if (poundIndex != -1) {
             url = url.substring(0, poundIndex);
         }
 
         i = url.indexOf("://");
+        // 2. 解析url中的协议protocol
         if (i >= 0) {
+            // 场景一：{protocol}://xxxxxxxx
             if (i == 0) throw new IllegalStateException("url missing protocol: \"" + url + "\"");
             protocol = url.substring(0, i);
             url = url.substring(i + 3);
         } else {
+            // 场景二：{protocol}:/xxxxxxxx
             // case: file:/path/to/file.txt
             i = url.indexOf(":/");
             if (i >= 0) {
@@ -227,10 +234,14 @@ public final class URL implements Serializable {
         }
 
         i = url.indexOf("/");
+        // 3. 解析url中的路径path
+        // {protocol}://xxxxxx/{path}?{parameters:p1=v1&p2=v2&p3=v3}
         if (i >= 0) {
             path = url.substring(i + 1);
             url = url.substring(0, i);
         }
+        // 4. 解析url中的用户名和密码
+        // {protocol}://{username}:{password}@xxxxxx/{path}?{parameters:p1=v1&p2=v2&p3=v3}
         i = url.lastIndexOf("@");
         if (i >= 0) {
             username = url.substring(0, i);
@@ -241,6 +252,8 @@ public final class URL implements Serializable {
             }
             url = url.substring(i + 1);
         }
+        // 5. 解析url中的host和port
+        // {protocol}://{username}:{password}@{host}:{port}/{path}?{parameters:p1=v1&p2=v2&p3=v3}
         i = url.indexOf(":");
         if (i >= 0 && i < url.length() - 1) {
             port = Integer.parseInt(url.substring(i + 1));
@@ -250,6 +263,11 @@ public final class URL implements Serializable {
         return new URL(protocol, username, password, host, port, path, parameters);
     }
 
+    /**
+     * url串转码
+     * @param value
+     * @return
+     */
     public static String encode(String value) {
         if (value == null || value.length() == 0) {
             return "";
@@ -261,6 +279,11 @@ public final class URL implements Serializable {
         }
     }
 
+    /**
+     * url串解码
+     * @param value
+     * @return
+     */
     public static String decode(String value) {
         if (value == null || value.length() == 0) {
             return "";
@@ -344,6 +367,12 @@ public final class URL implements Serializable {
         return port <= 0 ? host : host + ":" + port;
     }
 
+    /**
+     * 根据指定地址，生成新URL对象，与原URL不同仅仅在于address地址信息
+     *
+     * @param address
+     * @return
+     */
     public URL setAddress(String address) {
         int i = address.lastIndexOf(':');
         String host;
@@ -357,12 +386,26 @@ public final class URL implements Serializable {
         return new URL(protocol, username, password, host, port, path, getParameters());
     }
 
+    /**
+     * 返回所有地址串，包含backup地址
+     * ip1:port1,ip2:port2,ip3:port3,ip4:port4
+     * @return
+     */
     public String getBackupAddress() {
         return getBackupAddress(0);
     }
 
+    /**
+     * 指定端口号，返回所有地址串，包含backup地址
+     * 如果defaultPort > 0, 采用指定defaultPort端口
+     * ip1:port1,ip2:port2,ip3:port3,ip4:port4
+     *
+     * @param defaultPort
+     * @return
+     */
     public String getBackupAddress(int defaultPort) {
         StringBuilder address = new StringBuilder(appendDefaultPort(getAddress(), defaultPort));
+        // 获取url参数中backup为key的参数值，地址间用逗号分隔
         String[] backups = getParameter(Constants.BACKUP_KEY, new String[0]);
         if (backups != null && backups.length > 0) {
             for (String backup : backups) {
@@ -373,12 +416,17 @@ public final class URL implements Serializable {
         return address.toString();
     }
 
+    /**
+     * 返回包含集群所有地址的URL对象集合
+     * @return
+     */
     public List<URL> getBackupUrls() {
         List<URL> urls = new ArrayList<URL>();
         urls.add(this);
         String[] backups = getParameter(Constants.BACKUP_KEY, new String[0]);
         if (backups != null && backups.length > 0) {
             for (String backup : backups) {
+                // setAddress生成除了host/port不同，其他信息和当前URL一致的URL对象
                 urls.add(this.setAddress(backup));
             }
         }
@@ -406,6 +454,10 @@ public final class URL implements Serializable {
         return new URL(protocol, username, password, host, port, path, getParameters());
     }
 
+    /**
+     * 返回绝对路径
+     * @return
+     */
     public String getAbsolutePath() {
         if (path != null && !path.startsWith("/")) {
             return "/" + path;

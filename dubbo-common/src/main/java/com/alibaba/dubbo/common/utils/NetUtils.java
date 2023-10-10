@@ -248,6 +248,7 @@ public class NetUtils {
     }
 
     /**
+     * 根据host名称获取对应的IP地址
      * @param hostName
      * @return ip address or hostName if UnknownHostException
      */
@@ -259,10 +260,20 @@ public class NetUtils {
         }
     }
 
+    /**
+     * 返回address对应的地址串{ip}:{port}
+     * @param address
+     * @return
+     */
     public static String toAddressString(InetSocketAddress address) {
         return address.getAddress().getHostAddress() + ":" + address.getPort();
     }
 
+    /**
+     * 地址串{ip}:{port}解析为InetSocketAddress对象
+     * @param address
+     * @return
+     */
     public static InetSocketAddress toAddress(String address) {
         int i = address.indexOf(':');
         String host;
@@ -277,6 +288,14 @@ public class NetUtils {
         return new InetSocketAddress(host, port);
     }
 
+    /**
+     * 生成对应url串
+     * @param protocol
+     * @param host
+     * @param port
+     * @param path
+     * @return
+     */
     public static String toURL(String protocol, String host, int port, String path) {
         StringBuilder sb = new StringBuilder();
         sb.append(protocol).append("://");
