@@ -115,6 +115,7 @@ public class ExtensionLoader<T> {
     /**
      * 指定的 @Adaptive 类
      *    Adaptive类似一个代理对象，比如根据类型注入属性时，不会注入具体的扩展点实现，而是注入一个代理对象，在调用具体方法时，由代理对象确定具体调用的扩展点
+     *    Adaptive代理的主要目的是根据入参来决定使用哪一个扩展点对象执行实际逻辑
      */
     private volatile Class<?> cachedAdaptiveClass = null;
     /**
@@ -200,6 +201,7 @@ public class ExtensionLoader<T> {
     }
 
     /**
+     * 返回激活扩展点对象集合
      * This is equivalent to {@code getActivateExtension(url, key, null)}
      *
      * @param url url
@@ -212,6 +214,7 @@ public class ExtensionLoader<T> {
     }
 
     /**
+     * 返回激活扩展点对象集合
      * This is equivalent to {@code getActivateExtension(url, values, null)}
      *
      * @param url    url
@@ -224,6 +227,7 @@ public class ExtensionLoader<T> {
     }
 
     /**
+     * 返回激活扩展点对象集合
      * This is equivalent to {@code getActivateExtension(url, url.getParameter(key).split(","), null)}
      *
      * @param url   url
@@ -238,6 +242,7 @@ public class ExtensionLoader<T> {
     }
 
     /**
+     * 获取激活扩展点对象集合
      * Get activate extensions.
      *
      * @param url    url
@@ -250,11 +255,17 @@ public class ExtensionLoader<T> {
         List<T> exts = new ArrayList<T>();
         List<String> names = values == null ? new ArrayList<String>(0) : Arrays.asList(values);
         if (!names.contains(Constants.REMOVE_VALUE_PREFIX + Constants.DEFAULT_KEY)) {
+            // 指定的激活扩展点名称中不包含-default
+            // 加载扩展类信息
             getExtensionClasses();
+            // 遍历当前扩展点所有激活扩展点
             for (Map.Entry<String, Activate> entry : cachedActivates.entrySet()) {
+                // 扩展点名称
                 String name = entry.getKey();
+                // 扩展点上@Activate注解信息
                 Activate activate = entry.getValue();
                 if (isMatchGroup(group, activate.group())) {
+                    // 当前扩展点支持指定组group
                     if (!names.contains(name)
                             && !names.contains(Constants.REMOVE_VALUE_PREFIX + name)
                             && isActive(activate, url)) {
@@ -287,6 +298,13 @@ public class ExtensionLoader<T> {
         return exts;
     }
 
+    /**
+     * 是否存在匹配组
+     *
+     * @param group 当前指定的组
+     * @param groups 扩展点实现类@Activate中指定的支持的组集合
+     * @return
+     */
     private boolean isMatchGroup(String group, String[] groups) {
         if (group == null || group.length() == 0) {
             return true;
