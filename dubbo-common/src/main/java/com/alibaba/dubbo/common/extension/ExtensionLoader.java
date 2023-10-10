@@ -243,6 +243,10 @@ public class ExtensionLoader<T> {
 
     /**
      * 获取激活扩展点对象集合
+     *    集合逻辑描述如下：
+     *    1. 如果values中没有排除掉默认扩展点即“-default”，会找到 标注了@Activate注解 && group匹配 && 满足url激活条件 的扩展点对象集合listDefault
+     *    2. values中指定的扩展点名称对应的扩展点对象集合listSpecify
+     *    listDefault + listSpecify 就是激活扩展点对象集合
      * Get activate extensions.
      *
      * @param url    url
@@ -256,6 +260,7 @@ public class ExtensionLoader<T> {
         List<String> names = values == null ? new ArrayList<String>(0) : Arrays.asList(values);
         if (!names.contains(Constants.REMOVE_VALUE_PREFIX + Constants.DEFAULT_KEY)) {
             // 指定的激活扩展点名称中不包含-default
+            // -default表示不包含values中未指定的扩展点名称，但是属于指定组，且满足激活条件的扩展点
             // 加载扩展类信息
             getExtensionClasses();
             // 遍历当前扩展点所有激活扩展点
@@ -269,6 +274,8 @@ public class ExtensionLoader<T> {
                     if (!names.contains(name)
                             && !names.contains(Constants.REMOVE_VALUE_PREFIX + name)
                             && isActive(activate, url)) {
+                        // names表示当前需要激活的扩展点名称
+                        // names中不包含当前扩展点 && names中没有指定排除当前扩展点[-name] && 根据url判断出@Activate处于需要激活状态
                         T ext = getExtension(name);
                         exts.add(ext);
                     }
@@ -277,16 +284,23 @@ public class ExtensionLoader<T> {
             Collections.sort(exts, ActivateComparator.COMPARATOR);
         }
         List<T> usrs = new ArrayList<T>();
+        //
         for (int i = 0; i < names.size(); i++) {
             String name = names.get(i);
             if (!name.startsWith(Constants.REMOVE_VALUE_PREFIX)
                     && !names.contains(Constants.REMOVE_VALUE_PREFIX + name)) {
+                // 指定的不是需要排除的扩展点名称，比如-name
                 if (Constants.DEFAULT_KEY.equals(name)) {
+                    // default表示前一段，查询出的这边未指定扩展点名称，但是分组/激活条件匹配的扩展点集合
                     if (!usrs.isEmpty()) {
+                        // 这边处理意思是根据顺序
+                        // 比如["ext1", "ext2", "default", "ext3"]
+                        // 结果是：指定的扩展点1，指定的扩展点2，default扩展点集合，指定的扩展点3
                         exts.addAll(0, usrs);
                         usrs.clear();
                     }
                 } else {
+                    // 获取指定扩展点名对应的扩展点对象
                     T ext = getExtension(name);
                     usrs.add(ext);
                 }
@@ -319,7 +333,16 @@ public class ExtensionLoader<T> {
         return false;
     }
 
+    /**
+     * 根据url信息判断当前Activate是否需要激活
+     *
+     * @param activate
+     * @param url
+     * @return
+     */
     private boolean isActive(Activate activate, URL url) {
+        // @Activate注解中value()指定激活当前扩展点需要存在的属性key值
+        // 只要url中存在其中一个key值属性，说明需要激活
         String[] keys = activate.value();
         if (keys.length == 0) {
             return true;
@@ -330,6 +353,7 @@ public class ExtensionLoader<T> {
                 String v = entry.getValue();
                 if ((k.equals(key) || k.endsWith("." + key))
                         && ConfigUtils.isNotEmpty(v)) {
+                    // 存在至少一个@Activate中value()中key为键的属性值
                     return true;
                 }
             }
