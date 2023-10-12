@@ -18,33 +18,15 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.alibaba</groupId>
-        <artifactId>dubbo-parent</artifactId>
+        <artifactId>dubbo-demo-spring</artifactId>
         <version>2.6.13-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
-    <artifactId>dubbo-demo</artifactId>
-    <packaging>pom</packaging>
+    <artifactId>dubbo-demo-spring-api</artifactId>
+    <packaging>jar</packaging>
     <name>${project.artifactId}</name>
-    <description>The demo module of dubbo project</description>
+    <description>The demo spring api module of dubbo project</description>
     <properties>
         <skip_maven_deploy>true</skip_maven_deploy>
     </properties>
-    <modules>
-        <module>dubbo-demo-api</module>
-        <module>dubbo-demo-provider</module>
-        <module>dubbo-demo-consumer</module>
-        <module>dubbo-demo-spring</module>
-    </modules>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>com.alibaba</groupId>
-                <artifactId>dubbo-bom</artifactId>
-                <version>${project.parent.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
 </project>
