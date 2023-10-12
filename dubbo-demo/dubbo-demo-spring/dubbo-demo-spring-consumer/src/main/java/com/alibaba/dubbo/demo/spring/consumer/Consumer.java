@@ -1,13 +1,12 @@
 package com.alibaba.dubbo.demo.spring.consumer;
 
+import com.alibaba.dubbo.config.annotation.Reference;
+import com.alibaba.dubbo.config.spring.context.annotation.EnableDubbo;
+import com.alibaba.dubbo.demo.spring.api.DemoService;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
-
-import com.alibaba.dubbo.config.annotation.Reference;
-import com.alibaba.dubbo.config.spring.context.annotation.EnableDubbo;
-import com.alibaba.dubbo.demo.spring.api.DemoService;
 
 @Configuration
 @ComponentScan("com.alibaba.dubbo.demo.spring.consumer")
@@ -22,8 +21,7 @@ public class Consumer {
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Consumer.class);
         context.start();
 
-        Consumer consumer = context.getBean(Consumer.class);
-
-
+        DemoService demoService = context.getBean(DemoService.class);
+        demoService.sayHello("liyilin");
     }
 }
