@@ -41,6 +41,9 @@ import java.util.List;
 import static org.springframework.beans.factory.BeanFactoryUtils.beansOfTypeIncludingAncestors;
 
 /**
+ * Dubbo配置属性赋值绑定的Bean后置处理器
+ * 完成对Config Bean对象的属性赋值
+ *
  * Dubbo Config Binding {@link BeanPostProcessor}
  *
  * @see EnableDubboConfigBinding
@@ -83,6 +86,7 @@ public class DubboConfigBindingBeanPostProcessor implements BeanPostProcessor, A
     public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
 
         if (beanName.equals(this.beanName) && bean instanceof AbstractConfig) {
+            // 每一个ConfigBean对应一个单独的Bean后置处理器，根据BeanName区分
 
             AbstractConfig dubboConfig = (AbstractConfig) bean;
 

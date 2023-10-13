@@ -26,6 +26,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * 解析包含的多个 @EnableDubboConfigBinding 注解功能
  * Multiple {@link EnableDubboConfigBinding} {@link Annotation}
  *
  * @since 2.5.8

@@ -48,6 +48,7 @@ import static org.springframework.beans.factory.support.BeanDefinitionBuilder.ro
 import static org.springframework.beans.factory.support.BeanDefinitionReaderUtils.registerWithGeneratedName;
 
 /**
+ * 根据 @EnableDubboConfigBinding 注解信息，创建并注册对应Config对象的BeanDefinition
  * {@link AbstractConfig Dubbo Config} binding Bean registrar
  *
  * @see EnableDubboConfigBinding
@@ -70,10 +71,18 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
 
     }
 
+    /**
+     * 根据 @EnableDubboConfigBinding 注解信息生成对应Config对象BeanDefinition
+     * @param attributes @EnableDubboConfigBinding 注解上属性信息
+     * @param registry
+     */
     protected void registerBeanDefinitions(AnnotationAttributes attributes, BeanDefinitionRegistry registry) {
 
+        // 1. 获取当前需要匹配的属性前缀, 如“dubbo.application”, "dubbo.protocol"等
+        // 每个前缀对应一种配置类型
         String prefix = environment.resolvePlaceholders(attributes.getString("prefix"));
 
+        // 2. 当前处理的Config对象类型
         Class<? extends AbstractConfig> configClass = attributes.getClass("type");
 
         boolean multiple = attributes.getBoolean("multiple");
@@ -87,6 +96,7 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
                                           boolean multiple,
                                           BeanDefinitionRegistry registry) {
 
+        // 1. 遍历获取配置数据中，prefix起始的属性信息
         Map<String, Object> properties = getSubProperties(environment.getPropertySources(), prefix);
 
         if (CollectionUtils.isEmpty(properties)) {
@@ -97,13 +107,26 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
             return;
         }
 
+        // 2. 生成当前配置Config对象的BeanName
+        // 分为单属性和多属性两个命名策略：
+        //    2.1 如果是单属性
+        //        beanName优先取id指定的名称，比如前缀"dubbo.application", 命名属性名取"dubbo.application.id"
+        //        如果没有指定，自动生成 全类名+'#0'
+        //        比如org.apache.dubbo.config.RegistryConfig#0
+        //    2.2 如果是多属性
+        //        beanName是个集合，因为有多套配置，比如定义了多套协议，名称取后续第一个名称"dubbo.applications.{beanName}"
+        //        比如"dubbo.applications.a1.xxx"，beanName即取a1
         Set<String> beanNames = multiple ? resolveMultipleBeanNames(properties) :
                 Collections.singleton(resolveSingleBeanName(properties, configClass, registry));
 
         for (String beanName : beanNames) {
 
+            // 3. 注册Config对象的BeanDefinition
+            // 简单BeanDefinition，只记录了configClass和beanName
+            // 根据此BeanDefinition创建的Bean对象属性仍是空的
             registerDubboConfigBean(beanName, configClass, registry);
 
+            // 4. 注册Bean后置处理器，完成配置Bean对象的属性绑定
             registerDubboConfigBindingBeanPostProcessor(prefix, beanName, multiple, registry);
 
         }

@@ -34,6 +34,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * 注解：提供将Properties文件中配置项生成对应Config对象的能力
+ *
  * As  a convenient and multiple {@link EnableDubboConfigBinding}
  * in default behavior , is equal to single bean bindings with below convention prefixes of properties:
  * <ul>

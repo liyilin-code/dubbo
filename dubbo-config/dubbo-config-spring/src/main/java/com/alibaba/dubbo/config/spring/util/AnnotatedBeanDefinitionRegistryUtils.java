@@ -37,6 +37,7 @@ public abstract class AnnotatedBeanDefinitionRegistryUtils {
     private static final Log logger = LogFactory.getLog(AnnotatedBeanDefinitionRegistryUtils.class);
 
     /**
+     * 扫描注解类annotatedClasses，解析成BeanDefinition添加到BeanDefinitionRegistry中
      * Register Beans
      *
      * @param registry         {@link BeanDefinitionRegistry}
@@ -50,12 +51,14 @@ public abstract class AnnotatedBeanDefinitionRegistryUtils {
 
         boolean debugEnabled = logger.isDebugEnabled();
 
+        // 底层采用Spring的AnnotatedBeanDefinitionReader实现
         AnnotatedBeanDefinitionReader reader = new AnnotatedBeanDefinitionReader(registry);
 
         if (debugEnabled) {
             logger.debug(registry.getClass().getSimpleName() + " will register annotated classes : " + Arrays.asList(annotatedClasses) + " .");
         }
 
+        // 解析annotatedClasses为BeanDefinition
         reader.register(annotatedClasses);
 
     }

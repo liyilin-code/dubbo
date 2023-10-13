@@ -28,6 +28,9 @@ import com.alibaba.dubbo.config.RegistryConfig;
 import org.springframework.context.annotation.Configuration;
 
 /**
+ * Dubbo配置信息配置类
+ * 提供了单配置和多配置属性的解析映射功能
+ * 定义
  * Dubbo {@link AbstractConfig Config} {@link Configuration}
  *
  * @see Configuration
@@ -45,6 +48,8 @@ import org.springframework.context.annotation.Configuration;
 public class DubboConfigConfiguration {
 
     /**
+     * 单Dubbo配置映射配置
+     *
      * Single Dubbo {@link AbstractConfig Config} Bean Binding
      */
     @EnableDubboConfigBindings({
@@ -61,6 +66,8 @@ public class DubboConfigConfiguration {
     }
 
     /**
+     * 多Dubbo配置映射配置
+     *
      * Multiple Dubbo {@link AbstractConfig Config} Bean Binding
      */
     @EnableDubboConfigBindings({
