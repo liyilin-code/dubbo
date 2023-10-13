@@ -90,6 +90,7 @@ public class DubboConfigBindingBeanPostProcessor implements BeanPostProcessor, A
 
             AbstractConfig dubboConfig = (AbstractConfig) bean;
 
+            // 将前缀prefix起始的属性值，赋值给dubboConfig对象
             bind(prefix, dubboConfig);
 
             customize(beanName, dubboConfig);
