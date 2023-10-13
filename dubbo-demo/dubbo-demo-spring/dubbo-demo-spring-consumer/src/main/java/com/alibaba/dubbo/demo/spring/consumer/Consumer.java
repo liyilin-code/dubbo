@@ -22,6 +22,7 @@ public class Consumer {
         context.start();
 
         DemoService demoService = context.getBean(DemoService.class);
-        demoService.sayHello("liyilin");
+        String resp = demoService.sayHello("liyilin");
+        System.out.println(resp);
     }
 }
