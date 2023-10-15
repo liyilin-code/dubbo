@@ -131,6 +131,9 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
 
         }
 
+        // 5. 注册Dubbo配置扩展实现的BeanDefinition
+        // DubboConfigBindingBeanPostProcessor会调用扩展点实现Bean对Config对象进行自定义操作
+        // NamePropertyDefaultValueDubboConfigBeanCustomizer将beanName赋值给Config的name属性
         registerDubboConfigBeanCustomizers(registry);
 
     }

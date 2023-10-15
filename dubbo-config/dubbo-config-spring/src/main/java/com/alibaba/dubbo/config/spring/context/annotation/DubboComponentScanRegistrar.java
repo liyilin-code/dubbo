@@ -54,6 +54,7 @@ public class DubboComponentScanRegistrar implements ImportBeanDefinitionRegistra
     @Override
     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
 
+        // 1. 获取注解上指定的待扫描包路径
         Set<String> packagesToScan = getPackagesToScan(importingClassMetadata);
 
         registerServiceAnnotationBeanPostProcessor(packagesToScan, registry);
@@ -92,6 +93,14 @@ public class DubboComponentScanRegistrar implements ImportBeanDefinitionRegistra
 
     }
 
+    /**
+     * 获取注解上指定的包路径，是下面三个来源的合集
+     * 1. @DubboComponentScan中basePackages列表
+     * 2. @DubboComponentScan中value列表
+     * 3. @DubboComponentScan中basePackageClasses指定类所在包路径
+     * @param metadata
+     * @return
+     */
     private Set<String> getPackagesToScan(AnnotationMetadata metadata) {
         AnnotationAttributes attributes = AnnotationAttributes.fromMap(
                 metadata.getAnnotationAttributes(DubboComponentScan.class.getName()));

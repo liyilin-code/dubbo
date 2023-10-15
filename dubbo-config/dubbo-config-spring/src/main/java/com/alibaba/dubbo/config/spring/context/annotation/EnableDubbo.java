@@ -29,7 +29,8 @@ import java.lang.annotation.Target;
 
 /**
  * 组合注解：用作组合@EnableDubboConfig 和 @DubboComponentScan
- * 1. @EnableDubboConfig: 将Properties文件中的配置项生成对应的Config对象
+ * 1. @EnableDubboConfig: 将Properties文件中的配置项生成对应的Config对象并赋值
+ * 2. @DubboComponentScan: 完成@Service和@Reference注解的扫描处理
  *
  * Enables Dubbo components as Spring Beans, equals
  * {@link DubboComponentScan} and {@link EnableDubboConfig} combination.

@@ -93,6 +93,9 @@ public class DubboConfigBindingBeanPostProcessor implements BeanPostProcessor, A
             // 将前缀prefix起始的属性值，赋值给dubboConfig对象
             bind(prefix, dubboConfig);
 
+            // 扩展点Bean接口DubboConfigBeanCustomizer，对Config做一些扩展处理
+            // 比如NamePropertyDefaultValueDubboConfigBeanCustomizer
+            // 实现将beanName设置到dubboConfig的name属性上功能
             customize(beanName, dubboConfig);
         }
         return bean;
