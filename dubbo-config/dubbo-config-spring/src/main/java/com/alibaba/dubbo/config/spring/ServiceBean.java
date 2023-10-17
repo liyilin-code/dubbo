@@ -46,6 +46,11 @@ import java.util.Map;
 import static com.alibaba.dubbo.config.spring.util.BeanFactoryUtils.addApplicationListener;
 
 /**
+ * ServiceBean对象相当于Dubbo服务的一个包装类
+ * ref属性引用真正执行逻辑的Bean对象
+ * 实现了ApplicationListener接口，监听Spring是否启动完成
+ * 当Spring启动完成后，通过export方法实现服务导出
+ *
  * ServiceFactoryBean
  *
  * @export
@@ -97,6 +102,11 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
         return service;
     }
 
+    /**
+     * 监听Spring启动完成事件
+     * 当Spring启动完成后，通过export方法完成服务导出功能
+     * @param event the event to respond to
+     */
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
         if (isDelay() && !isExported() && !isUnexported()) {
@@ -259,6 +269,7 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
     }
 
     /**
+     * 服务导出入口
      * @since 2.6.5
      */
     @Override

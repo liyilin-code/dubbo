@@ -97,6 +97,11 @@ class ServiceBeanNameBuilder {
         return this;
     }
 
+    /**
+     * 创建 ServiceBean 对应BeanName
+     * 格式：ServiceBean:{interfaceName}:{version}:{group}
+     * @return
+     */
     public String build() {
         StringBuilder beanNameBuilder = new StringBuilder("ServiceBean").append(SEPARATOR);
         // Required

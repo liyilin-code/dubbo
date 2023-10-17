@@ -40,6 +40,8 @@ import java.util.Set;
 import static org.springframework.beans.factory.support.BeanDefinitionBuilder.rootBeanDefinition;
 
 /**
+ * Dubbo组件的扫描注册器，是通过@Import注解引入的BeanDefinition注册器
+ *     功能是通过扫描指定包路径下对象，处理其中@Service和@Reference注解
  * Dubbo {@link DubboComponentScan} Bean Registrar
  *
  * @see Service
@@ -57,13 +59,22 @@ public class DubboComponentScanRegistrar implements ImportBeanDefinitionRegistra
         // 1. 获取注解上指定的待扫描包路径
         Set<String> packagesToScan = getPackagesToScan(importingClassMetadata);
 
+        // 2. 注册一个Bean工厂后置处理器处理@Service注解
+        // 注意：这边不是Bean后置处理器，而是Bean工厂后置处理器
+        // Bean后置处理器是对所有Bean起作用
+        // Bean工厂后置处理器用于注册BeanDefinition
+        // 因为处理@Service注解后，为的是创建对应Bean对象，所以这一步就是注册Bean对象的BeanDefinition
         registerServiceAnnotationBeanPostProcessor(packagesToScan, registry);
+
 
         registerReferenceAnnotationBeanPostProcessor(registry);
 
     }
 
     /**
+     * 注册ServiceAnnotationBeanPostProcessor
+     * ServiceAnnotationBeanPostProcessor是一个Bean工厂后置处理器
+     *     功能是解析@Service注解的对象，并注册对应的BeanDefinition
      * Registers {@link ServiceAnnotationBeanPostProcessor}
      *
      * @param packagesToScan packages to scan without resolving placeholders
