@@ -53,6 +53,12 @@
             <artifactId>dubbo-remoting-netty4</artifactId>
         </dependency>
 
+        <!-- netty发送数据需要序列化数据，所以需要序列化实现 -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>dubbo-serialization-hessian2</artifactId>
+        </dependency>
+
         <!-- 服务信息需要导出到注册中心，zookeeper是其中一个注册中心方案 -->
         <!-- 注册中心RegistryFactory的zookeeper扩展点 -->
         <dependency>

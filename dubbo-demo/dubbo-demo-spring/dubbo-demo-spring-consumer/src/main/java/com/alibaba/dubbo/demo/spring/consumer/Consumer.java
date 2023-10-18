@@ -21,8 +21,13 @@ public class Consumer {
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Consumer.class);
         context.start();
 
-        DemoService demoService = context.getBean(DemoService.class);
-        String resp = demoService.sayHello("liyilin");
+        // 当前Dubbo版本不支持如下操作
+        // 原因是引入的服务代理对象仅仅注入了属性中
+        // 并没有添加到Spring容器中
+        //DemoService demoService = context.getBean(DemoService.class);
+        //String resp = demoService.sayHello("liyilin");
+        Consumer consumer = context.getBean(Consumer.class);
+        String resp = consumer.service.sayHello("liyilin");
         System.out.println(resp);
     }
 }
