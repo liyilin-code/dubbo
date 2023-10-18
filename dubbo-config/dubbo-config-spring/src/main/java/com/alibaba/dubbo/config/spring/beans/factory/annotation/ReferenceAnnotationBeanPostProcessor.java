@@ -103,10 +103,22 @@ public class ReferenceAnnotationBeanPostProcessor extends AnnotationInjectedBean
         return Collections.unmodifiableMap(injectedMethodReferenceBeanCache);
     }
 
+    /**
+     * 创建待注入的服务代理对象
+     * @param reference      {@link A annotation}
+     * @param bean            Current bean that will be injected
+     * @param beanName        Current bean name that will be injected
+     * @param injectedType    the type of injected-object
+     * @param injectedElement {@link InjectionMetadata.InjectedElement}
+     * @return
+     * @throws Exception
+     */
     @Override
     protected Object doGetInjectedBean(Reference reference, Object bean, String beanName, Class<?> injectedType,
                                        InjectionMetadata.InjectedElement injectedElement) throws Exception {
 
+        // 1. 生成对应ServiceBean名称
+        // ServiceBean:{interfaceName}:{version}:{group}
         String referencedBeanName = buildReferencedBeanName(reference, injectedType);
 
         ReferenceBean referenceBean = buildReferenceBeanIfAbsent(referencedBeanName, reference, injectedType, getClassLoader());

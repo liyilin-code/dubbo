@@ -77,6 +77,11 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
 
     private final Log logger = LogFactory.getLog(getClass());
 
+    /**
+     * 子类实现的Annotation子类泛型
+     * 该抽象类由ReferenceAnnotationBeanPostProcessor实现
+     * annotationType = Reference.class
+     */
     private final Class<A> annotationType;
 
     private final ConcurrentMap<String, AnnotationInjectedBeanPostProcessor.AnnotatedInjectionMetadata> injectionMetadataCache =
@@ -93,6 +98,7 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     private int order = Ordered.LOWEST_PRECEDENCE;
 
     public AnnotationInjectedBeanPostProcessor() {
+        // 当前实现类的泛型类
         this.annotationType = resolveGenericType(getClass());
     }
 
@@ -119,12 +125,33 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
     }
 
+    /**
+     * Spring回掉函数入口, 处理每一个Bean对象
+     * 对每一个Bean对象进行@Reference注解的属性注入
+     *
+     * @param pvs the property values that the factory is about to apply (never {@code null})
+     * @param pds the relevant property descriptors for the target bean (with ignored
+     * dependency types - which the factory handles specifically - already filtered out)
+     * @param bean the bean instance created, but whose properties have not yet been set
+     * @param beanName the name of the bean
+     * @return
+     * @throws BeanCreationException
+     */
     @Override
     public PropertyValues postProcessPropertyValues(
             PropertyValues pvs, PropertyDescriptor[] pds, Object bean, String beanName) throws BeanCreationException {
 
+        // 1. 找到当前Bean注入点
+        // 有两个注入点
+        // 一是被 @Reference 注解标注的属性field
+        // 二是被 @Reference 注解标注的方法setXXX
         InjectionMetadata metadata = findInjectionMetadata(beanName, bean.getClass(), pvs);
         try {
+            // 2. 注入点注入对象
+            // metadata实现类是AnnotationInjectedBeanPostProcessor.AnnotatedInjectionMetadata
+            // InjectionMetadata简单扩展, 本质通过自定义属性/方法注入点inject方法完成属性注入
+            // AnnotationInjectedBeanPostProcessor.AnnotatedFieldElement 属性注入点
+            // AnnotationInjectedBeanPostProcessor.AnnotatedMethodElement 方法注入点
             metadata.inject(bean, beanName, pvs);
         } catch (BeanCreationException ex) {
             throw ex;
@@ -137,6 +164,8 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
 
 
     /**
+     * 返回存在 @Reference 注解的属性注入点列表
+     *
      * Finds {@link InjectionMetadata.InjectedElement} Metadata from annotated {@link A} fields
      *
      * @param beanClass The {@link Class} of Bean
@@ -146,10 +175,12 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
 
         final List<AnnotationInjectedBeanPostProcessor.AnnotatedFieldElement> elements = new LinkedList<AnnotationInjectedBeanPostProcessor.AnnotatedFieldElement>();
 
+        // 1. 遍历每一个属性
         ReflectionUtils.doWithFields(beanClass, new ReflectionUtils.FieldCallback() {
             @Override
             public void doWith(Field field) throws IllegalArgumentException, IllegalAccessException {
 
+                // 2. 获取属性上 @Reference 注解
                 A annotation = getAnnotation(field, getAnnotationType());
 
                 if (annotation != null) {
@@ -161,6 +192,8 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
                         return;
                     }
 
+                    // 3. 属性上存在 @Reference 注解
+                    // 构建对应的注入点对象添加到列表中
                     elements.add(new AnnotationInjectedBeanPostProcessor.AnnotatedFieldElement(field, annotation));
                 }
 
@@ -172,6 +205,8 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     /**
+     * 返回存在 @Reference 注解的setXXX方法注入点列表
+     *
      * Finds {@link InjectionMetadata.InjectedElement} Metadata from annotated {@link A @A} methods
      *
      * @param beanClass The {@link Class} of Bean
@@ -181,6 +216,7 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
 
         final List<AnnotationInjectedBeanPostProcessor.AnnotatedMethodElement> elements = new LinkedList<AnnotationInjectedBeanPostProcessor.AnnotatedMethodElement>();
 
+        // 1. 遍历每一个方法
         ReflectionUtils.doWithMethods(beanClass, new ReflectionUtils.MethodCallback() {
             @Override
             public void doWith(Method method) throws IllegalArgumentException, IllegalAccessException {
@@ -191,6 +227,7 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
                     return;
                 }
 
+                // 2. 找出方法上 @Reference 注解
                 A annotation = findAnnotation(bridgedMethod, getAnnotationType());
 
                 if (annotation != null && method.equals(ClassUtils.getMostSpecificMethod(method, beanClass))) {
@@ -207,6 +244,8 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
                         }
                     }
                     PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, beanClass);
+                    // 3. 方法上存在 @Reference 注解
+                    // 构建对应的注入点对象添加到列表中
                     elements.add(new AnnotationInjectedBeanPostProcessor.AnnotatedMethodElement(method, pd, annotation));
                 }
             }
@@ -217,13 +256,29 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
 
+    /**
+     * 构建BeanClass存在的@Reference注解的注入点元数据
+     * @param beanClass
+     * @return
+     */
     private AnnotationInjectedBeanPostProcessor.AnnotatedInjectionMetadata buildAnnotatedMetadata(final Class<?> beanClass) {
+        // 1. 构建标注在属性field上的注入点
         Collection<AnnotationInjectedBeanPostProcessor.AnnotatedFieldElement> fieldElements = findFieldAnnotationMetadata(beanClass);
+        // 2. 构建标注在方法setXXX上的注入点
         Collection<AnnotationInjectedBeanPostProcessor.AnnotatedMethodElement> methodElements = findAnnotatedMethodMetadata(beanClass);
         return new AnnotationInjectedBeanPostProcessor.AnnotatedInjectionMetadata(beanClass, fieldElements, methodElements);
 
     }
 
+    /**
+     * 找到当前Bean对象的注入点信息
+     * 1. @Reference 标注的属性field
+     * 2. @Reference 标注的set方法method
+     * @param beanName
+     * @param clazz
+     * @param pvs
+     * @return
+     */
     public InjectionMetadata findInjectionMetadata(String beanName, Class<?> clazz, PropertyValues pvs) {
         // Fall back to class name as cache key, for backwards compatibility with custom callers.
         String cacheKey = (StringUtils.hasLength(beanName) ? beanName : clazz.getName());
@@ -237,6 +292,7 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
                         metadata.clear(pvs);
                     }
                     try {
+                        // 构建@Reference注解所在的注入点元数据
                         metadata = buildAnnotatedMetadata(clazz);
                         this.injectionMetadataCache.put(cacheKey, metadata);
                     } catch (NoClassDefFoundError err) {
@@ -319,6 +375,7 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     /**
+     * 返回引入服务的代理对象
      * Get injected-object from specified {@link A annotation} and Bean Class
      *
      * @param annotation      {@link A annotation}
@@ -337,6 +394,7 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
         Object injectedObject = injectedObjectsCache.get(cacheKey);
 
         if (injectedObject == null) {
+            // 创建待注入的服务代理对象
             injectedObject = doGetInjectedBean(annotation, bean, beanName, injectedType, injectedElement);
             // Customized inject-object if necessary
             injectedObjectsCache.putIfAbsent(cacheKey, injectedObject);
@@ -526,15 +584,24 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
             this.annotation = annotation;
         }
 
+        /**
+         * 属性注入点注入入口
+         * @param bean
+         * @param beanName
+         * @param pvs
+         * @throws Throwable
+         */
         @Override
         protected void inject(Object bean, String beanName, PropertyValues pvs) throws Throwable {
 
             Class<?> injectedType = field.getType();
 
+            // 1. 获取引入服务的代理对象
             injectedBean = getInjectedObject(annotation, bean, beanName, injectedType, this);
 
             ReflectionUtils.makeAccessible(field);
 
+            // 2. 属性赋值
             field.set(bean, injectedBean);
 
         }

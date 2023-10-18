@@ -398,6 +398,8 @@ public class ServiceAnnotationBeanPostProcessor implements BeanDefinitionRegistr
 
     /**
      * 构建 @Service 注解所在类对应的 ServiceBean 的BeanDefinition
+     * @Service注解中指定的信息先赋值给ServiceBean对象
+     *
      * @param service
      * @param interfaceClass
      * @param annotatedServiceBeanName

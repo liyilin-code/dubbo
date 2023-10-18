@@ -66,7 +66,7 @@ public class DubboComponentScanRegistrar implements ImportBeanDefinitionRegistra
         // 因为处理@Service注解后，为的是创建对应Bean对象，所以这一步就是注册Bean对象的BeanDefinition
         registerServiceAnnotationBeanPostProcessor(packagesToScan, registry);
 
-
+        // 3. 注册一个Bean后置处理器处理@Reference注解
         registerReferenceAnnotationBeanPostProcessor(registry);
 
     }
@@ -92,6 +92,11 @@ public class DubboComponentScanRegistrar implements ImportBeanDefinitionRegistra
     }
 
     /**
+     * 注册处理 @Reference 属性注解的Bean后置处理器
+     * 处理器完成如下几件事情
+     * 1. 确定哪些属性上存在@Reference注解
+     * 2. 创建对应的服务代理对象
+     * 3. 属性赋值
      * Registers {@link ReferenceAnnotationBeanPostProcessor} into {@link BeanFactory}
      *
      * @param registry {@link BeanDefinitionRegistry}
