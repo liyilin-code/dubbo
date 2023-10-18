@@ -121,10 +121,12 @@ public class ReferenceAnnotationBeanPostProcessor extends AnnotationInjectedBean
         // ServiceBean:{interfaceName}:{version}:{group}
         String referencedBeanName = buildReferencedBeanName(reference, injectedType);
 
+        // 2. 生成ReferenceBean对象
         ReferenceBean referenceBean = buildReferenceBeanIfAbsent(referencedBeanName, reference, injectedType, getClassLoader());
 
         cacheInjectedReferenceBean(referenceBean, injectedElement);
 
+        // 3. 生成待赋值的服务代理对象
         Object proxy = buildProxy(referencedBeanName, referenceBean, injectedType);
 
         return proxy;
@@ -214,6 +216,9 @@ public class ReferenceAnnotationBeanPostProcessor extends AnnotationInjectedBean
             ReferenceBeanBuilder beanBuilder = ReferenceBeanBuilder
                     .create(reference, classLoader, applicationContext)
                     .interfaceClass(referencedType);
+            // 创建一个ReferenceBean对象
+            // 1. new ReferenceBean()
+            // 2. 将注解中属性赋值给ReferenceBean对象
             referenceBean = beanBuilder.build();
             referenceBeanCache.put(referencedBeanName, referenceBean);
         }
