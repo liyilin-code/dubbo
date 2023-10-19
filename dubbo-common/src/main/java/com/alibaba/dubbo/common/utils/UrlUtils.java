@@ -33,8 +33,13 @@ public class UrlUtils {
         }
         String url;
         if (address.indexOf("://") >= 0) {
+            // 场景一: address是完整的url字符串
+            // 比如 zookeeper://127.0.0.1:2181
             url = address;
         } else {
+            // 场景二: address是ip地址的拼接
+            // 比如 127.0.0.1,0.0.0.0
+            // 需要组装成url格式
             String[] addresses = Constants.COMMA_SPLIT_PATTERN.split(address);
             url = addresses[0];
             if (addresses.length > 1) {
@@ -48,13 +53,19 @@ public class UrlUtils {
                 url += "?" + Constants.BACKUP_KEY + "=" + backup.toString();
             }
         }
+        // 决定协议
+        // 默认dubbo
         String defaultProtocol = defaults == null ? null : defaults.get("protocol");
         if (defaultProtocol == null || defaultProtocol.length() == 0) {
             defaultProtocol = "dubbo";
         }
+        // 决定用户名
         String defaultUsername = defaults == null ? null : defaults.get("username");
+        // 决定密码
         String defaultPassword = defaults == null ? null : defaults.get("password");
+        // 决定端口
         int defaultPort = StringUtils.parseInteger(defaults == null ? null : defaults.get("port"));
+        // 决定path
         String defaultPath = defaults == null ? null : defaults.get("path");
         Map<String, String> defaultParameters = defaults == null ? null : new HashMap<String, String>(defaults);
         if (defaultParameters != null) {
