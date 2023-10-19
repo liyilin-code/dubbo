@@ -89,21 +89,40 @@ public abstract class AbstractConfig implements Serializable {
         return value;
     }
 
+    /**
+     * config属性赋值
+     *     根据Config类型为Config对象属性赋值
+     *     比如ProviderConfig对象
+     *     匹配属性前缀 dubbo.provider.
+     *     1. 尝试从JVM系统属性中匹配指定ID的属性值
+     *     2. 尝试从JVM系统属性中匹配通用属性值
+     *     3. 尝试从dubbo配置文件中匹配指定ID的属性值
+     *     4. 尝试从dubbo配置文件中匹配通用的属性值
+     * @param config
+     */
     protected static void appendProperties(AbstractConfig config) {
         if (config == null) {
             return;
         }
+        // 1. 生成属性前缀
+        // 根据Config类名, 比如ProviderConfig -> dubbo.provider.
         String prefix = "dubbo." + getTagName(config.getClass()) + ".";
         Method[] methods = config.getClass().getMethods();
+        // 2. 遍历Config类每一个方法
         for (Method method : methods) {
             try {
                 String name = method.getName();
                 if (name.length() > 3 && name.startsWith("set") && Modifier.isPublic(method.getModifiers())
                         && method.getParameterTypes().length == 1 && isPrimitive(method.getParameterTypes()[0])) {
+                    // 3. 匹配set方法进行属性设置
+
+                    // 4. 根据set方法获取属性名
+                    // 比如setApplication, 属性名就是application
                     String property = StringUtils.camelToSplitName(name.substring(3, 4).toLowerCase() + name.substring(4), ".");
 
                     String value = null;
                     if (config.getId() != null && config.getId().length() > 0) {
+                        // 5. 尝试从JVM系统属性中指定ID的属性值
                         String pn = prefix + config.getId() + "." + property;
                         value = System.getProperty(pn);
                         if (!StringUtils.isBlank(value)) {
@@ -111,6 +130,7 @@ public abstract class AbstractConfig implements Serializable {
                         }
                     }
                     if (value == null || value.length() == 0) {
+                        // 6. 尝试从JVM系统属性中通用属性值
                         String pn = prefix + property;
                         value = System.getProperty(pn);
                         if (!StringUtils.isBlank(value)) {
@@ -131,9 +151,11 @@ public abstract class AbstractConfig implements Serializable {
                         if (getter != null) {
                             if (getter.invoke(config) == null) {
                                 if (config.getId() != null && config.getId().length() > 0) {
+                                    // 7. 尝试从dubbo配置文件中指定ID的属性值
                                     value = ConfigUtils.getProperty(prefix + config.getId() + "." + property);
                                 }
                                 if (value == null || value.length() == 0) {
+                                    // 8. 尝试从dubbo配置文件中通用的属性值
                                     value = ConfigUtils.getProperty(prefix + property);
                                 }
                                 if (value == null || value.length() == 0) {

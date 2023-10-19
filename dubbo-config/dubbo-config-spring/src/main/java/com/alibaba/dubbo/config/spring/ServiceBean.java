@@ -126,6 +126,14 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
         return supportedApplicationListener && (delay == null || delay == -1);
     }
 
+    /**
+     * 修改属性值
+     *     处理部分属性, 如果当前Service未明确指定, 则默认采用全局配置信息
+     *     比如Service支持的协议protocol, 如果没有指定支持协议, 则支持全局配置的所有协议
+     *     这边全局配置是指Spring容器中存在的ProtocolConfig对象
+     *
+     * @throws Exception
+     */
     @Override
     @SuppressWarnings({"unchecked", "deprecation"})
     public void afterPropertiesSet() throws Exception {
@@ -270,12 +278,16 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
 
     /**
      * 服务导出入口
+     *     当Spring容器启动完成后会回掉export函数，完成服务导出的逻辑
      * @since 2.6.5
      */
     @Override
     public void export() {
+        // 1. 服务导出
         super.export();
         // Publish ServiceBeanExportedEvent
+        // 2. 扩展点
+        // 服务导出成功后, 发布已导出事件
         publishExportEvent();
     }
 
