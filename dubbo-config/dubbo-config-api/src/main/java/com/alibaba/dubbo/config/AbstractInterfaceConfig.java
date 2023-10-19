@@ -160,6 +160,8 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
 
     /**
      * 加载当前服务需要导出的注册中心URL列表
+     * 其中协议protocol设置为registry, 真正的协议比如zookeeper作为键值对registry=zookeeper放到url参数中
+     * 比如: registry://127.0.0.1:2181/com.alibaba.dubbo.registry.RegistryService?application=demo-provider&dubbo=2.0.2&group=dubbo-demo&pid=14820&registry=zookeeper&timestamp=1697716621683
      * @param provider 是否为提供者
      * @return
      */
