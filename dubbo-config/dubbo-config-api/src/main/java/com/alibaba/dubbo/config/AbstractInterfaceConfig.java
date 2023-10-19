@@ -158,11 +158,17 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         }
     }
 
+    /**
+     * 加载当前服务需要导出的注册中心URL列表
+     * @param provider 是否为提供者
+     * @return
+     */
     protected List<URL> loadRegistries(boolean provider) {
         checkRegistry();
         List<URL> registryList = new ArrayList<URL>();
         if (registries != null && !registries.isEmpty()) {
             for (RegistryConfig config : registries) {
+                // 1. 获取注册中心ip
                 String address = config.getAddress();
                 if (address == null || address.length() == 0) {
                     address = Constants.ANYHOST_VALUE;
@@ -173,7 +179,9 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                 }
                 if (address.length() > 0 && !RegistryConfig.NO_AVAILABLE.equalsIgnoreCase(address)) {
                     Map<String, String> map = new HashMap<String, String>();
+                    // 2. 将应用配置ApplicationConfig属性/属性值存入map中
                     appendParameters(map, application);
+                    // 3. 将注册中心配置RegistryConfig属性/属性值存入map中
                     appendParameters(map, config);
                     map.put("path", RegistryService.class.getName());
                     map.put("dubbo", Version.getProtocolVersion());
@@ -188,6 +196,8 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                             map.put("protocol", "dubbo");
                         }
                     }
+                    // 4. 生成URL列表
+                    // 因为address可以指定了多个注册中心地址, 所以每个address可以生成多条URL
                     List<URL> urls = UrlUtils.parseURLs(address, map);
                     for (URL url : urls) {
                         url = url.addParameter(Constants.REGISTRY_KEY, url.getProtocol());

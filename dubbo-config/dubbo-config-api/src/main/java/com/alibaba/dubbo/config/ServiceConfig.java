@@ -330,7 +330,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         checkApplication();
         // 6. 校验注册中心是否存在
         checkRegistry();
-        // 7. 校验支持协议信息
+        // 7. 校验各种信息合法性
         checkProtocol();
         appendProperties(this);
         checkStub(interfaceClass);
@@ -338,6 +338,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         if (path == null || path.length() == 0) {
             path = interfaceName;
         }
+        // 8. 导出服务
         doExportUrls();
         CodecSupport.addProviderSupportedSerialization(getUniqueServiceName(), getExportedUrls());
         ProviderModel providerModel = new ProviderModel(getUniqueServiceName(), this, ref);
@@ -378,6 +379,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void doExportUrls() {
+        // 1. 生成当前服务需要导出的注册中心URL列表
         List<URL> registryURLs = loadRegistries(true);
         for (ProtocolConfig protocolConfig : protocols) {
             doExportUrlsFor1Protocol(protocolConfig, registryURLs);
