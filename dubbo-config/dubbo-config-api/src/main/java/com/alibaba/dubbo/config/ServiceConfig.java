@@ -381,11 +381,19 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     private void doExportUrls() {
         // 1. 生成当前服务需要导出的注册中心URL列表
         List<URL> registryURLs = loadRegistries(true);
+        // 2. 每个服务可能会支持多种协议
+        // 依次遍历支持的协议, 导出每一个协议的url到所有注册中心上
         for (ProtocolConfig protocolConfig : protocols) {
+            // 导出一个协议的服务
             doExportUrlsFor1Protocol(protocolConfig, registryURLs);
         }
     }
 
+    /**
+     * 导出一个协议的服务到所有注册中心上
+     * @param protocolConfig 当前服务支持的协议
+     * @param registryURLs 注册中心列表
+     */
     private void doExportUrlsFor1Protocol(ProtocolConfig protocolConfig, List<URL> registryURLs) {
         String name = protocolConfig.getName();
         if (name == null || name.length() == 0) {
